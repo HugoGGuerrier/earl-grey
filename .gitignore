@@ -1,0 +1,13 @@
+.vscode
+
+obj
+out
+
+y.tab.h
+parser.tab.h
+y.tab.c
+parser.tab.c
+lex.yy.c
+
+*.egb
+*.exec
