@@ -112,8 +112,13 @@ int main(int argc, char *argv[]) {
         printf("\n");
     }
 
+    // Create the data struct
+    compiler_data_t data;
+    data.settings = &settings;
+    data.error = &error;
+
     // Do the compilation
-    compile(*prog, &settings, &error);
+    compile(*prog, &data);
 
     // Clean the memory
     clean_ast(*prog);
