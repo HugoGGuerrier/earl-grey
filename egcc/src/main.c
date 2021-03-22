@@ -18,12 +18,8 @@ static int _parse_args(int argc, char *argv[], compiler_settings_t *settings) {
 
     // Verify the arguments number, else display the help
     if (argc < 2) {
-        printf("Usage : egc [OPTIONS] <FILE.eg>\n\n");
-        printf("Options :\n");
-        printf("    -o <OUTPUT.egb> : Set the output file\n");
-        printf("    -i <dir1:dir2> : Precise the include directories\n");
-        printf("    -v : Enable the verbose mode\n");
-        printf("    --ast : Display the ast before the compilation\n");
+        printf("Usage : egcc [OPTIONS] <FILE.eg>\n");
+        printf("Use -h option to display help\n");
         return 1;
     }
 
@@ -32,16 +28,21 @@ static int _parse_args(int argc, char *argv[], compiler_settings_t *settings) {
         char *current_arg = argv[i];
         if(current_arg[0] == '-') {
 
-            // Get the output file
-            if(strcmp("-o", current_arg) == 0) {
-                i++;
-                settings->output_file_name = argv[i];
-            } else
+             // Get the verbose flag
+            if(strcmp("-h", current_arg) == 0) {
+                settings->flags |= HELP_MASK;
+            }
 
             // Get the include dirs
             if(strcmp("-i", current_arg) == 0) {
                 i++;
                 settings->include_dirs = str_split(argv[i], ':');
+            } else
+
+            // Get the output file
+            if(strcmp("-o", current_arg) == 0) {
+                i++;
+                settings->output_file_name = argv[i];
             } else
 
             // Get the verbose flag
@@ -65,6 +66,20 @@ static int _parse_args(int argc, char *argv[], compiler_settings_t *settings) {
     return 0;
 }
 
+// --- Display the help
+static void _display_help() {
+    printf("egcc : The earl grey compiler\n");
+    printf("Version : %s\n\n", EGCC_VERSION);
+    printf("Usage : egcc [OPTIONS] <FILE.eg>\n\n");
+    printf("Options :\n");
+    printf("    -h : Display this help menu\n");
+    printf("    -i <dir1:dir2> : Precise the include directories\n");
+    printf("    -o <OUTPUT.egb> : Set the output file\n");
+    printf("    -v : Enable the verbose mode\n");
+    printf("\n");
+    printf("    --ast : Display the ast before the compilation\n");
+}
+
 // --- The main function
 int main(int argc, char *argv[]) {
 
@@ -84,6 +99,12 @@ int main(int argc, char *argv[]) {
     // Do the argument parsing
     if(_parse_args(argc, argv, &settings)) {
         return 1;
+    }
+
+    // Display the help of needed
+    if(settings.flags & HELP_MASK) {
+        _display_help();
+        return 0;
     }
 
     // Verify that the input file exists

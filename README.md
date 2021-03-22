@@ -21,7 +21,8 @@ The virtual machine is also in C for performance issues.
 
 ## How to install :
 
-* TODO
+* Run `$> sudo make install`
+* You can now use `$> egcc` and `$> egvm` from every working directory
 
 ## How to run the compiler :
 
