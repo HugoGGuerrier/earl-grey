@@ -14,10 +14,8 @@ int _parse_args(int argc, char *argv[], machine_data_t *data) {
 
     // Verify the arguments number, else display the help
     if (argc < 2) {
-        printf("Usage : egvm [OPTIONS] <FILE.egb>\n\n");
-        printf("Options :\n");
-        printf("    -d : Enable the debug mode (Execute the bytecode safely)\n");
-        printf("    -l : Enable the logging mode !!! Works only in debug mode !!! (Save all instructions read in a file)\n");
+        printf("Usage : egvm [OPTIONS] <FILE.egb>\n");
+        printf("Use -h option to display help\n");
         return 1;
     }
 
@@ -30,6 +28,11 @@ int _parse_args(int argc, char *argv[], machine_data_t *data) {
             if(strcmp("-d", current_arg) == 0) {
                 data->flags |= DEBUG_FLAG;
             } else
+
+            // Get the log flag
+            if(strcmp("-h", current_arg) == 0) {
+                data->flags |= HELP_FLAG;
+            }
 
             // Get the log flag
             if(strcmp("-l", current_arg) == 0) {
@@ -52,6 +55,17 @@ int _parse_args(int argc, char *argv[], machine_data_t *data) {
 
 }
 
+// --- Display the help
+static void _display_help() {
+    printf("egvm : The earl grey virtual machine, base on the universal machine\n");
+    printf("Version : %s\n\n", EGVM_VERSION);
+    printf("Usage : egvm [OPTIONS] <FILE.egb>\n\n");
+    printf("Options :\n");
+    printf("    -d : Enable the debug mode (Execute the bytecode safely)\n");
+    printf("    -h : Display this help menu\n");
+    printf("    -l : Enable the logging mode !!! Works only in debug mode !!! (Save all instructions read in a file)\n");
+}
+
 // --- The main function to start the interpretation
 int main(int argc, char *argv[]) {
 
@@ -70,6 +84,12 @@ int main(int argc, char *argv[]) {
     // Parse the arguments
     if(_parse_args(argc, argv, &data)) {
         return 1;
+    }
+
+    // Check the help flag
+    if(data.flags & HELP_FLAG) {
+        _display_help();
+        return 0;
     }
 
     // Check if the bytecode file exists

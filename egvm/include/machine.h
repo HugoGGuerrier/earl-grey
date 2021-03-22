@@ -25,6 +25,7 @@
 #define SKIP_SHIFT_FLAG 0b10
 #define LOG_FLAG 0b100
 #define DEBUG_FLAG 0b1000
+#define HELP_FLAG 0b10000
 
 
 // ===== Structure definitions =====
