@@ -21,14 +21,19 @@ static void _compile_prog(AST_Prog prog, compiler_data_t *data);
 static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data);
 static void _compile_stmts(AST_Stmts stmts, compiler_data_t *data);
 static void _compile_binop(AST_Binop binop, compiler_data_t *data);
+static void _compile_expr(AST_Expr expr, compiler_data_t *data);
 
 
 // ===== Functions to write in the file =====
 
+static void _write_int(compiler_data_t *data, int d) {
+    fwrite(&d, sizeof(int), 1, data->settings->output_file);
+    data->offset++;
+}
 
 static void _write_op(compiler_data_t *data, int opcode, int a, int b, int c) {
     int op = (opcode << 28) | ((a << 6) | (b << 3) | c);
-    fwrite(&op, sizeof(int), 1, data->settings->output_file);
+    _write_int(data, op);
 }
 
 static void _cond_move(compiler_data_t *data, int a, int b, int c)          { _write_op(data, 0, a, b, c); }
@@ -48,7 +53,7 @@ static void _load_prog(compiler_data_t *data, int b, int c)                 { _w
 
 static void _ortho(compiler_data_t *data, int a, int value) {
     int op = (13 << 28) | ((a << 25) | value);
-    fwrite(&op, sizeof(int), 1, data->settings->output_file);
+    _write_int(data, op);
 }
 
 
@@ -57,17 +62,13 @@ static void _ortho(compiler_data_t *data, int a, int value) {
 
 // --- Push a value on the stack
 static void _push(int register_src, compiler_data_t *data) {
-    // AMEND SA, SP, register_src
     _array_update(data, SA, SP, register_src);
-    // ADD SP, SP, ONE
     _add(data, SP, SP, ONE);
 }
 
 // --- Pop a value from the stack
 static void _pop(int register_dst, compiler_data_t *data) {
-    // ADD SP, SP, MO
     _add(data, SP, SP, MO);
-    // INDEX register_dst, SA, SP
     _array_index(data, register_dst, SA, SP);
 }
 
@@ -80,6 +81,17 @@ static void _compile_prog(AST_Prog prog, compiler_data_t *data) {
 
 // --- Compile a statement
 static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
+
+    switch (stmt->stmt_type) {
+
+    case LET_STMT:
+        // printf("let(%s, ", stmt->content.let_stmt.ident);
+        _compile_expr(stmt->content.let_stmt.expr, data);
+        break;
+    
+    default:
+        break;
+    }
 
 }
 
@@ -102,15 +114,27 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
     switch (expr->expr_type) {
 
     case INT_EXPR:
-        // expr->content.int_expr
+        // The integer value is representable with 25 bits :
+        if (expr->content.int_expr < 33554432) {
+            _ortho(data, ACC, expr->content.int_expr);
+        } else {
+            _ortho(data, TMP1, 0);
+            _ortho(data, TMP2, data->offset + 2);
+            _load_prog(data, TMP1, TMP2);
+            _write_int(data, expr->content.int_expr);
+            _ortho(data, TMP2, data->offset - 1);
+            _array_index(data, TMP2, TMP1, TMP2);
+        }
         break;
 
     case BINOP_EXPR:
-        // _compile_expr(expr->content.binop_expr.left, data);
+        _compile_binop(expr->content.binop_expr, data);
         break;
 
     default:
-        
+        // data->error->error_code = 
+        // data->error->error_message = "No such expression";
+        // goto error_end;
         break;
 
     }
@@ -120,14 +144,20 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
 // --- Compile a binary operation
 static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
 
+    _compile_expr(binop->left, data);
+    _push(ACC, data);
+    _compile_expr(binop->right, data);
+    _pop(TMP1, data);
+
     switch (binop->binop_type) {
 
     case PLUS:
-        //_compile_expr(_, data);
+        _add(data, ACC, ACC, TMP1);
         break;
 
     case MINUS:
-        
+        _multiplication(data, ACC, ACC, MO);
+        _add(data, ACC, ACC, TMP1);
         break;
 
     case TIMES:
@@ -149,13 +179,15 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
 
 // --- Compile the full program
 void compile(AST_Prog prog, compiler_data_t *data) {
-    // Initialisation des registres spéciaux ONE et MO
-
-    // ORTHO ONE, 1
-    // NAND MO, ONE, ONE
-    // ADD MO, MO, ONE
+    // Initialisation des registres spéciaux ONE = 1 et MO = -1 :
+    _ortho(data, ONE, 1);
+    _nand(data, MO, ONE, ONE);
+    _add(data, MO, MO, ONE);
 
 
     // Lancement de la compilation de l'AST
     _compile_prog(prog, data);
+
+    // error_end:
+    // return 1;
 }

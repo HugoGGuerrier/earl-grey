@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     compiler_settings_t *settings;
     compiler_error_t *error;
+    unsigned int offset;
 } compiler_data_t;
 
 
