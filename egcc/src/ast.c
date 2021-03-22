@@ -5,6 +5,81 @@
 #include "ast.h"
 
 
+// ===== Internal functions for AST =====
+
+static AST_Binop _new_binop(AST_Expr left, char *name, AST_Expr right);
+static AST_Unop _new_unop(char *name, AST_Expr expr);
+
+// --- Create a new binary operator
+static AST_Binop _new_binop(AST_Expr left, char *name, AST_Expr right) {
+    AST_Binop res = (AST_Binop) malloc(sizeof(struct _binop));
+    res->binop_type = BIN_UNKNOWN;
+
+    if(strcmp("+", name) == 0) {
+        res->binop_type =  PLUS;
+    } else
+    if(strcmp("-", name) == 0) {
+        res->binop_type = MINUS;
+    } else
+    if(strcmp("*", name) == 0) {
+        res->binop_type = TIMES;
+    } else
+    if(strcmp("/", name) == 0) {
+        res->binop_type = DIVIDE;
+    } else
+    if(strcmp("%", name) == 0) {
+        res->binop_type = PERCENT;
+    } else
+    if(strcmp("==", name) == 0) {
+        res->binop_type = EQEQ;
+    } else
+    if(strcmp("<=", name) == 0) {
+        res->binop_type = LTEQ;
+    } else
+    if(strcmp(">=", name) == 0) {
+        res->binop_type = GTEQ;
+    } else
+    if(strcmp("<", name) == 0) {
+        res->binop_type = LT;
+    } else
+    if(strcmp(">", name) == 0) {
+        res->binop_type = GT;
+    } else
+    if(strcmp("&&", name) == 0) {
+        res->binop_type = AND;
+    } else
+    if(strcmp("||", name) == 0) {
+        res->binop_type = OR;
+    }
+
+    free(name);
+
+    res->left = left;
+    res->right = right;
+
+    return res;
+}
+
+// --- Create a new unary operator
+static AST_Unop _new_unop(char *name, AST_Expr expr) {
+    AST_Unop res = (AST_Unop) malloc(sizeof(struct _unop));
+    res->unop_type = UN_UNKNOWN;
+
+    if(strcmp("-", name) == 0) {
+        res->unop_type = NEGATE;
+    } else
+    if(strcmp("!", name) == 0) {
+        res->unop_type = NOT;
+    }
+
+    free(name);
+
+    res->expr = expr;
+
+    return res;
+}
+
+
 // ===== Functions to create the AST with dynamic memory =====
 
 // --- Create a new program
@@ -132,21 +207,18 @@ AST_Expr new_paren_expr(AST_Expr expr) {
 }
 
 // --- Create a new binop expression
-AST_Expr new_binop_expr(AST_Expr left, AST_Binop op, AST_Expr right) {
+AST_Expr new_binop_expr(AST_Expr left, char *op, AST_Expr right) {
     AST_Expr res = (AST_Expr) malloc(sizeof(struct _expr));
     res->expr_type = BINOP_EXPR;
-    res->content.binop_expr.left = left;
-    res->content.binop_expr.op = op;
-    res->content.binop_expr.right = right;
+    res->content.binop_expr = _new_binop(left, op, right);
     return res;
 }
 
 // --- Create a new unop expression
-AST_Expr new_unop_expr(AST_Unop op, AST_Expr expr) {
+AST_Expr new_unop_expr(char *op, AST_Expr expr) {
     AST_Expr res = (AST_Expr) malloc(sizeof(struct _expr));
     res->expr_type = UNOP_EXPR;
-    res->content.unop_expr.op = op;
-    res->content.unop_expr.expr = expr;
+    res->content.unop_expr = _new_unop(op, expr);
     return res;
 }
 
@@ -191,67 +263,6 @@ AST_Params add_param(AST_Params params, char *param) {
     AST_Params res = (AST_Params) malloc(sizeof(struct _params));
     res->head = param;
     res->tail = params;
-    return res;
-}
-
-
-// --- Create a new binary operator
-AST_Binop new_binop(char *name) {
-    AST_Binop res = (AST_Binop) malloc(sizeof(struct _binop));
-    res->binop_type = BIN_UNKNOWN;
-
-    if(strcmp("+", name) == 0) {
-        res->binop_type =  PLUS;
-    } else
-    if(strcmp("-", name) == 0) {
-        res->binop_type = BIN_MINUS;
-    } else
-    if(strcmp("*", name) == 0) {
-        res->binop_type = TIMES;
-    } else
-    if(strcmp("/", name) == 0) {
-        res->binop_type = DIVIDE;
-    } else
-    if(strcmp("%", name) == 0) {
-        res->binop_type = PERCENT;
-    } else
-    if(strcmp("==", name) == 0) {
-        res->binop_type = EQEQ;
-    } else
-    if(strcmp("<=", name) == 0) {
-        res->binop_type = LTEQ;
-    } else
-    if(strcmp(">=", name) == 0) {
-        res->binop_type = GTEQ;
-    } else
-    if(strcmp("<", name) == 0) {
-        res->binop_type = LT;
-    } else
-    if(strcmp(">", name) == 0) {
-        res->binop_type = GT;
-    } else
-    if(strcmp("&&", name) == 0) {
-        res->binop_type = AND;
-    } else
-    if(strcmp("||", name) == 0) {
-        res->binop_type = OR;
-    }
-
-    return res;
-}
-
-// --- Create a new unary operator
-AST_Unop new_unop(char *name) {
-    AST_Unop res = (AST_Unop) malloc(sizeof(struct _unop));
-    res->unop_type = UN_UNKNOWN;
-
-    if(strcmp("-", name) == 0) {
-        res->unop_type = UN_MINUS;
-    } else
-    if(strcmp("!", name) == 0) {
-        res->unop_type = NOT;
-    }
-
     return res;
 }
 
@@ -361,12 +372,12 @@ static void _clean_expr(AST_Expr expr) {
         break;
 
     case BINOP_EXPR:
-        _clean_expr(expr->content.binop_expr.left);
-        _clean_expr(expr->content.binop_expr.right);
+        _clean_expr(expr->content.binop_expr->left);
+        _clean_expr(expr->content.binop_expr->right);
         break;
 
     case UNOP_EXPR:
-        _clean_expr(expr->content.unop_expr.expr);
+        _clean_expr(expr->content.unop_expr->expr);
         break;
 
     case APP_EXPR:

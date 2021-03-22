@@ -198,14 +198,11 @@ static void _print_expr(AST_Expr expr) {
         break;
 
     case BINOP_EXPR:
-        _print_expr(expr->content.binop_expr.left);
-        _print_binop(expr->content.binop_expr.op);
-        _print_expr(expr->content.binop_expr.right);
+        _print_binop(expr->content.binop_expr);
         break;
 
     case UNOP_EXPR:
-        _print_unop(expr->content.unop_expr.op);
-        _print_expr(expr->content.unop_expr.expr);
+        _print_unop(expr->content.unop_expr);
         break;
 
     case APP_EXPR:
@@ -266,13 +263,15 @@ static void _print_params(AST_Params params) {
 // --- Print a binary operation
 static void _print_binop(AST_Binop binop) {
 
+    _print_expr(binop->left);
+
     switch (binop->binop_type) {
 
     case PLUS:
         printf("+");
         break;
 
-    case BIN_MINUS:
+    case MINUS:
         printf("-");
         break;
 
@@ -322,6 +321,8 @@ static void _print_binop(AST_Binop binop) {
 
     }
 
+    _print_expr(binop->right);
+
 }
 
 // --- Print an unary operation
@@ -329,7 +330,7 @@ static void _print_unop(AST_Unop unop) {
 
     switch (unop->unop_type) {
 
-    case UN_MINUS:
+    case NEGATE:
         printf("-");
         break;
     
@@ -342,6 +343,8 @@ static void _print_unop(AST_Unop unop) {
         break;
 
     }
+
+    _print_expr(unop->expr);
     
 }
 

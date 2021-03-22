@@ -42,9 +42,6 @@ void yyerror (AST_Prog *, const char *);
 
   AST_Args args;
   AST_Params params;
-
-  AST_Binop binop;
-  AST_Unop unop;
 }
 
 %type<prog> prog
@@ -58,9 +55,6 @@ void yyerror (AST_Prog *, const char *);
 
 %type<args> args;
 %type<params> params;
-
-%type<binop> binop;
-%type<unop> unop;
 
 %start prog
 
@@ -95,8 +89,8 @@ expr:
 | STRING                        { $$ = new_string_expr($1); }
 | IDENT                         { $$ = new_ident_expr($1); }
 | L_PAREN expr R_PAREN          { $$ = new_paren_expr($2); }
-| expr binop expr               { $$ = new_binop_expr($1, $2, $3); }
-| unop expr                     { $$ = new_unop_expr($1, $2); }
+| expr BINOP expr               { $$ = new_binop_expr($1, $2, $3); }
+| UNOP expr                     { $$ = new_unop_expr($1, $2); }
 | expr L_PAREN args R_PAREN     { $$ = new_app_expr($1, $3); }
 | lambda                        { $$ = new_lambda_expr($1); }
 ;
@@ -115,14 +109,6 @@ params:
   IDENT                   { $$ = add_param(NULL, $1); }
 | IDENT COMMA params      { $$ = add_param($3, $1); }
 | { $$ = add_param(NULL, NULL); }
-;
-
-binop: 
-  BINOP      { $$ = new_binop($1); }
-;
-
-unop: 
-  UNOP       { $$ = new_unop($1); }
 ;
 
 %%

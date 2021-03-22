@@ -106,7 +106,7 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
         break;
 
     case BINOP_EXPR:
-        _compile_expr(expr->content.binop_expr.left, data);
+        // _compile_expr(expr->content.binop_expr.left, data);
         break;
 
     default:
@@ -123,10 +123,10 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
     switch (binop->binop_type) {
 
     case PLUS:
-        _compile_expr(_, data);
+        //_compile_expr(_, data);
         break;
 
-    case BIN_MINUS:
+    case MINUS:
         
         break;
 

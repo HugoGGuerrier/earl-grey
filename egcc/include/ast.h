@@ -91,16 +91,9 @@ struct _expr {
 
         AST_Expr paren_expr;
 
-        struct {
-            AST_Expr left;
-            AST_Binop op;
-            AST_Expr right;
-        } binop_expr;
+        AST_Binop binop_expr;
 
-        struct {
-            AST_Unop op;
-            AST_Expr expr;
-        } unop_expr;
+        AST_Unop unop_expr;
 
         struct {
             AST_Expr expr;
@@ -133,7 +126,7 @@ struct _params {
 struct _binop {
     enum {
         PLUS,
-        BIN_MINUS,
+        MINUS,
         TIMES,
         DIVIDE,
         PERCENT,
@@ -147,16 +140,21 @@ struct _binop {
 
         BIN_UNKNOWN
     } binop_type;
+
+    AST_Expr left;
+    AST_Expr right;
 };
 
 // --- Structure that represent an unary operator
 struct _unop {
     enum {
-        UN_MINUS,
+        NEGATE,
         NOT,
 
         UN_UNKNOWN
     } unop_type;
+
+    AST_Expr expr;
 };
 
 
@@ -178,8 +176,8 @@ AST_Expr new_int_expr(int integer);
 AST_Expr new_string_expr(char *string);
 AST_Expr new_ident_expr(char *ident);
 AST_Expr new_paren_expr(AST_Expr expr);
-AST_Expr new_binop_expr(AST_Expr left, AST_Binop op, AST_Expr right);
-AST_Expr new_unop_expr(AST_Unop op, AST_Expr expr);
+AST_Expr new_binop_expr(AST_Expr left, char *op, AST_Expr right);
+AST_Expr new_unop_expr(char *op, AST_Expr expr);
 AST_Expr new_app_expr(AST_Expr expr, AST_Args args);
 AST_Expr new_lambda_expr(AST_Lambda lambda);
 
@@ -188,9 +186,6 @@ AST_Lambda new_lambda(AST_Params params, AST_Stmts body);
 AST_Args add_arg(AST_Args args, AST_Expr arg);
 
 AST_Params add_param(AST_Params params, char *param);
-
-AST_Binop new_binop(char *name);
-AST_Unop new_unop(char *name);
 
 void clean_ast(AST_Prog prog);
 
