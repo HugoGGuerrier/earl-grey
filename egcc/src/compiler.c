@@ -20,8 +20,9 @@ static void _pop(int register_dst, compiler_data_t *data);
 static void _compile_prog(AST_Prog prog, compiler_data_t *data);
 static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data);
 static void _compile_stmts(AST_Stmts stmts, compiler_data_t *data);
-static void _compile_binop(AST_Binop binop, compiler_data_t *data);
 static void _compile_expr(AST_Expr expr, compiler_data_t *data);
+static void _compile_binop(AST_Binop binop, compiler_data_t *data);
+static void _compile_unop(AST_Unop unop, compiler_data_t *data);
 
 
 // ===== Functions to write in the file =====
@@ -33,6 +34,9 @@ static void _write_int(compiler_data_t *data, int d) {
 
 static void _write_op(compiler_data_t *data, int opcode, int a, int b, int c) {
     int op = (opcode << 28) | ((a << 6) | (b << 3) | c);
+    //
+    // TODO : reverse int to match the endianess
+    //
     _write_int(data, op);
 }
 
@@ -84,11 +88,32 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
     switch (stmt->stmt_type) {
 
+    case VAR_STMT:
+        break;
+
     case LET_STMT:
         // printf("let(%s, ", stmt->content.let_stmt.ident);
         _compile_expr(stmt->content.let_stmt.expr, data);
         break;
     
+    case AFFECT_STMT:
+        break;
+
+    case FUN_STMT:
+        break;
+
+    case IF_STMT:
+        break;
+
+    case WHILE_STMT:
+        break;
+
+    case FOR_STMT:
+        break;
+
+    case RETURN_STMT:
+        break;
+
     default:
         break;
     }
@@ -119,18 +144,37 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
             _ortho(data, ACC, expr->content.int_expr);
         } else {
             _ortho(data, TMP1, 0);
-            _ortho(data, TMP2, data->offset + 2);
-            _load_prog(data, TMP1, TMP2);
+            _ortho(data, ACC, data->offset + 2);
+            _load_prog(data, TMP1, ACC);
             _write_int(data, expr->content.int_expr);
-            _ortho(data, TMP2, data->offset - 1);
-            _array_index(data, TMP2, TMP1, TMP2);
+            _ortho(data, ACC, data->offset - 1);
+            _array_index(data, ACC, TMP1, ACC);
         }
+        break;
+
+    case STRING_EXPR:
+        break;
+
+    case IDENT_EXPR:
+        break;
+
+    case PAREN_EXPR:
         break;
 
     case BINOP_EXPR:
         _compile_binop(expr->content.binop_expr, data);
         break;
 
+    case UNOP_EXPR:
+        _compile_unop(expr->content.unop_expr, data);
+        break;
+
+    case APP_EXPR:
+        break;
+
+    case LAMBDA_EXPR:
+        break;
+    
     default:
         // data->error->error_code = 
         // data->error->error_message = "No such expression";
@@ -141,9 +185,19 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
 
 }
 
+// --- Compile a lambda
+static void _print_lambda(AST_Lambda lambda) { }
+
+// --- Compile arguments
+static void _print_args(AST_Args args) { }
+
+// --- Compile parameters
+static void _print_params(AST_Params params) { }
+
 // --- Compile a binary operation
 static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
 
+    // The left operand (x) will be in TMP1 and the right one (y) will be in ACC :
     _compile_expr(binop->left, data);
     _push(ACC, data);
     _compile_expr(binop->right, data);
@@ -156,26 +210,96 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         break;
 
     case MINUS:
+        // x - y = x + (-1 * y)
         _multiplication(data, ACC, ACC, MO);
-        _add(data, ACC, ACC, TMP1);
+        _add(data, ACC, TMP1, ACC);
         break;
 
     case TIMES:
-        
+        _multiplication(data, ACC, TMP1, ACC);
         break;
 
     case DIVIDE:
-        
+        _division(data, ACC, TMP1, ACC);
         break;
 
+    case PERCENT:
+        // x % y = res
+        _division(data, TMP2, TMP1, ACC);       // x / y = n
+        _multiplication(data, TMP2, TMP2, ACC); // n * y = x - res
+        _multiplication(data, TMP2, TMP2, MO);  // x - (x - res) = res
+        _add(data, ACC, TMP1, TMP2);
+        break;
+
+    case EQEQ:
+        // Algorithme based on the universal logical operator NAND, following Boole algebra's rules :
+        _nand(data, TMP2, TMP1, ACC);   // r = NAND(x, y)
+        _nand(data, TMP1, TMP2, TMP1);  // r_x = NAND(r, x)
+        _nand(data, ACC, TMP2, ACC);    // r_y = NAND(r, y)
+        _nand(data, TMP1, TMP1, ACC);   // not_res = NAND(r_x, r_y)
+        // Interpretation of not_res :
+        // (not_res = 0) : x == y
+        // (not_res = 1) : x != y
+        // Initialisation of the result to true (1)
+        _ortho(data, ACC, 1);
+        // Put it at false (0) if not_res = 1
+        _cond_move(data, ACC, 0, TMP1);
+        break;
+
+    case LTEQ:
+        break;
+
+    case GTEQ:
+        break;
+
+    case LT:
+        break;
+
+    case GT:
+        break;
+
+    case AND:
+        // AND(x, y) = NAND(NAND(x, y), NAND(x,y)), following Boole algebra's rules 
+        _nand(data, ACC, TMP1, ACC);
+        _nand(data, ACC, ACC, ACC);
+        break;
+
+    case OR:
+        // AND(x, y) = NAND(NAND(x, x), NAND(y, y)), following Boole algebra's rules 
+        _nand(data, TMP1, TMP1, TMP1);
+        _nand(data, ACC, ACC, ACC);
+        _nand(data, ACC, TMP1, ACC);
+        break;
+    
     default:
-        
         break;
 
     }
 
 }
 
+// --- Compile an unary operation
+static void _compile_unop(AST_Unop unop, compiler_data_t *data) {
+
+    _compile_expr(unop->expr, data);
+
+    switch (unop->unop_type) {
+
+    case NEGATE:
+        _multiplication(data, ACC, ACC, MO);
+        break;
+    
+    case NOT:
+        // NOT(x) = NAND(x, x), following Boole algebra's rules 
+        _nand(data, ACC, ACC, ACC);
+        break;
+
+    default:
+        break;
+
+    }
+    
+}
 
 // --- Compile the full program
 void compile(AST_Prog prog, compiler_data_t *data) {
