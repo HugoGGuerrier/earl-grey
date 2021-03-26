@@ -90,15 +90,6 @@ AST_Prog new_prog(AST_Stmts stmts) {
 }
 
 
-// --- Create a new var statement
-AST_Stmt new_var_stmt(char *ident, AST_Expr expr) {
-    AST_Stmt res = (AST_Stmt) malloc(sizeof(struct _stmt));
-    res->stmt_type = VAR_STMT;
-    res->content.var_stmt.ident = ident;
-    res->content.var_stmt.expr = expr;
-    return res;
-}
-
 // --- Create a new let statement
 AST_Stmt new_let_stmt(char *ident, AST_Expr expr) {
     AST_Stmt res = (AST_Stmt) malloc(sizeof(struct _stmt));
@@ -287,11 +278,6 @@ static void _clean_prog(AST_Prog prog) {
 // --- Clean a statement
 static void _clean_stmt(AST_Stmt stmt) {
     switch(stmt->stmt_type) {
-
-    case VAR_STMT:
-        free(stmt->content.var_stmt.ident);
-        _clean_expr(stmt->content.var_stmt.expr);
-        break;
 
     case LET_STMT:
         free(stmt->content.let_stmt.ident);

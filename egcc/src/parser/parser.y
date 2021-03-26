@@ -23,7 +23,7 @@ void yyerror (AST_Prog *, const char *);
 %token              L_PAREN R_PAREN L_BRACK R_BRACK L_CURLB R_CURLB
 %token              SEMICOL COL COMMA
 %token              EQUAL
-%token              FUNCTION_WORD VAR_WORD LET_WORD IF_WORD ELSE_WORD WHILE_WORD FOR_WORD RETURN_WORD LAMBDA_WORD
+%token              FUNCTION_WORD LET_WORD IF_WORD ELSE_WORD WHILE_WORD FOR_WORD RETURN_WORD LAMBDA_WORD
 %token              NEW_LINE
 
 %union {
@@ -66,8 +66,7 @@ void yyerror (AST_Prog *, const char *);
 prog: stmts { *program_result = new_prog($1); };
 
 stmt:
-  VAR_WORD IDENT EQUAL expr                                                               { $$ = new_var_stmt($2, $4); }
-| LET_WORD IDENT EQUAL expr                                                               { $$ = new_let_stmt($2, $4); }
+  LET_WORD IDENT EQUAL expr                                                               { $$ = new_let_stmt($2, $4); }
 | IDENT EQUAL expr                                                                        { $$ = new_affect_stmt($1, $3); }
 | FUNCTION_WORD IDENT L_PAREN params R_PAREN L_CURLB stmts R_CURLB                        { $$ = new_fun_stmt($2, $4, $7); }
 | IF_WORD L_PAREN expr R_PAREN L_CURLB stmts R_CURLB ELSE_WORD L_CURLB stmts R_CURLB      { $$ = new_if_stmt($3, $6, $10); }

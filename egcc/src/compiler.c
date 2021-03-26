@@ -88,11 +88,7 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
     switch (stmt->stmt_type) {
 
-    case VAR_STMT:
-        break;
-
     case LET_STMT:
-        // printf("let(%s, ", stmt->content.let_stmt.ident);
         _compile_expr(stmt->content.let_stmt.expr, data);
         break;
     
@@ -103,7 +99,30 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         break;
 
     case IF_STMT:
-        break;
+        // Compilation of the condition expression
+        _compile_expr(stmt->content.if_stmt.cond, data);
+        int lbl_then = 0;
+        int lbl_else = 0;
+        int lbl_endif = 0;
+        _ortho(data, TMP2, lbl_then);
+        _ortho(data, TMP3, lbl_else);
+        // We will load the program at line TMP3 (jump TMP3)
+        // So we need to put TMP2 in TMP3 if ACC is true (!=0)
+        // This way, TMP3 = lbl_then if ACC is true, and else TMP3 = lbl_else
+        _cond_move(data, TMP3, TMP2, ACC);
+        // Jump/Loading :
+        _ortho(data, TMP1, 0);
+        _load_prog(data, TMP1, TMP3);
+        // --- lbl_then :
+        _compile_expr(stmt->content.if_stmt.conseq, data);
+        // and we jump at lbl_endif so we avoid the else part
+        _ortho(data, TMP1, 0);
+        _ortho(data, TMP2, lbl_endif);
+        _load_prog(data, TMP1, TMP2);
+        // --- lbl_else :
+        _compile_expr(stmt->content.if_stmt.altern, data);
+        // --- lbl_endif : nothing mre to do
+        break;  
 
     case WHILE_STMT:
         break;
@@ -159,6 +178,7 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
         break;
 
     case PAREN_EXPR:
+        _compile_expr(data, expr->content.paren_expr);
         break;
 
     case BINOP_EXPR:
@@ -232,7 +252,7 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         break;
 
     case EQEQ:
-        // Algorithme based on the universal logical operator NAND, following Boole algebra's rules :
+        // Algorithme based on the universal logical operator NAND, following Boole's algebra's rules :
         _nand(data, TMP2, TMP1, ACC);   // r = NAND(x, y)
         _nand(data, TMP1, TMP2, TMP1);  // r_x = NAND(r, x)
         _nand(data, ACC, TMP2, ACC);    // r_y = NAND(r, y)
@@ -259,13 +279,13 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         break;
 
     case AND:
-        // AND(x, y) = NAND(NAND(x, y), NAND(x,y)), following Boole algebra's rules 
+        // AND(x, y) = NAND(NAND(x, y), NAND(x,y)), following Boole's algebra's rules 
         _nand(data, ACC, TMP1, ACC);
         _nand(data, ACC, ACC, ACC);
         break;
 
     case OR:
-        // AND(x, y) = NAND(NAND(x, x), NAND(y, y)), following Boole algebra's rules 
+        // AND(x, y) = NAND(NAND(x, x), NAND(y, y)), following Boole's algebra's rules 
         _nand(data, TMP1, TMP1, TMP1);
         _nand(data, ACC, ACC, ACC);
         _nand(data, ACC, TMP1, ACC);
@@ -290,7 +310,7 @@ static void _compile_unop(AST_Unop unop, compiler_data_t *data) {
         break;
     
     case NOT:
-        // NOT(x) = NAND(x, x), following Boole algebra's rules 
+        // NOT(x) = NAND(x, x), following Boole's algebra's rules 
         _nand(data, ACC, ACC, ACC);
         break;
 

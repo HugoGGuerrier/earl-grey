@@ -42,14 +42,6 @@ static void _print_prog(AST_Prog prog) {
 static void _print_stmt(AST_Stmt stmt) {
     switch (stmt->stmt_type) {
 
-    case VAR_STMT:
-        _indent();
-        printf("var(%s, ", stmt->content.var_stmt.ident);
-        _print_expr(stmt->content.var_stmt.expr);
-        printf(")");
-
-        break;
-
     case LET_STMT:
         _indent();
         printf("let(%s, ", stmt->content.let_stmt.ident);

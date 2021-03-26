@@ -27,13 +27,8 @@ struct _prog {
 
 // --- Structure that represent a statement node
 struct _stmt {
-    enum {VAR_STMT, LET_STMT, AFFECT_STMT, FUN_STMT, IF_STMT, WHILE_STMT, FOR_STMT, RETURN_STMT} stmt_type;
+    enum {LET_STMT, AFFECT_STMT, FUN_STMT, IF_STMT, WHILE_STMT, FOR_STMT, RETURN_STMT} stmt_type;
     union {
-        struct {
-            char *ident;
-            AST_Expr expr;
-        } var_stmt;
-
         struct {
             char *ident;
             AST_Expr expr;
@@ -162,7 +157,6 @@ struct _unop {
 
 AST_Prog new_prog(AST_Stmts stmts);
 
-AST_Stmt new_var_stmt(char *ident, AST_Expr expr);
 AST_Stmt new_let_stmt(char *ident, AST_Expr expr);
 AST_Stmt new_affect_stmt(char *ident, AST_Expr expr);
 AST_Stmt new_fun_stmt(char *ident, AST_Params params, AST_Stmts body);

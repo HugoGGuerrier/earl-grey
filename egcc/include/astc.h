@@ -171,7 +171,6 @@ struct _unop {
 
 AST_C_Prog new_c_prog(AST_C_Stmts stmts);
 
-AST_C_Stmt new_var_c_stmt(char *ident, AST_C_Expr expr);
 AST_C_Stmt new_let_c_stmt(char *ident, AST_C_Expr expr);
 AST_C_Stmt new_affect_c_stmt(char *ident, AST_C_Expr expr);
 AST_C_Stmt new_fun_c_stmt(char *ident, AST_C_Params params, AST_C_Stmts body);

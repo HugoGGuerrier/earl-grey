@@ -36,7 +36,6 @@ string "[!-~]*"
 \=          { return(EQUAL); }
 
 function    { return(FUNCTION_WORD); }
-var         { return(VAR_WORD); }
 let         { return(LET_WORD); }
 if          { return(IF_WORD); }
 else        { return(ELSE_WORD); }
