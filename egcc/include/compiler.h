@@ -7,7 +7,7 @@
 
 // ===== Structure definitions =====
 
-// --- Structure for containing all configuration of the compiler
+// --- Structure to contain all compiler's configuration
 typedef struct {
     unsigned int flags;
     char *input_file_name;
@@ -17,17 +17,47 @@ typedef struct {
     char **include_dirs;
 } compiler_settings_t;
 
-// --- Structure for handling compiler errors
+// --- Structure to handle compiler errors
 typedef struct {
     int error_code;
     const char *error_message;
 } compiler_error_t;
 
-// --- Structure for containing data for the compiler
+// --- Structure to contain an instruction
+typedef struct {
+    enum {STD_OP, ORTHO_OP, BIGINT} op_type;
+    union {
+        struct {
+            int opcode;
+            int a;
+            int b;
+            int c;
+        } std_op;
+
+        struct {
+            int opcode;
+            int a;
+            int value;
+            char *target_lbl;
+        } ortho_op;
+
+        int big_int;
+    } content;
+} instruction;
+
+// --- Structure to associate labels to instructions
+typedef struct {
+    char *label;
+    instruction *instr;
+} labeled_instruction;
+
+// --- Structure to contain data for the compiler
 typedef struct {
     compiler_settings_t *settings;
     compiler_error_t *error;
-    unsigned int offset;
+    labeled_instruction *lbl_instr_arr;
+    unsigned int arr_size;
+    unsigned int arr_offset;
 } compiler_data_t;
 
 

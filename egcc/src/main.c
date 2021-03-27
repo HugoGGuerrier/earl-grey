@@ -137,7 +137,6 @@ int main(int argc, char *argv[]) {
     compiler_data_t data;
     data.settings = &settings;
     data.error = &error;
-    data.offset = 0;
 
     // Do the compilation
     compile(*prog, &data);
