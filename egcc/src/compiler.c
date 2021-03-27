@@ -21,11 +21,15 @@ static void _compile_prog(AST_Prog prog, compiler_data_t *data);
 static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data);
 static void _compile_stmts(AST_Stmts stmts, compiler_data_t *data);
 static void _compile_expr(AST_Expr expr, compiler_data_t *data);
+static void _print_lambda(AST_Lambda lambda, compiler_data_t *data);
+static void _print_args(AST_Args args, compiler_data_t *data);
+static void _print_params(AST_Params params, compiler_data_t *data);
 static void _compile_binop(AST_Binop binop, compiler_data_t *data);
 static void _compile_unop(AST_Unop unop, compiler_data_t *data);
 
 
 // ===== Functions to write in the file =====
+
 
 /*
 static void _write_int(compiler_data_t *data, int d) {
@@ -64,6 +68,7 @@ static void _ortho(compiler_data_t *data, int a, int value) {
 
 
 // ===== Functions to create the labeled instructions array =====
+
 
 static void _add_lbl_instr(compiler_data_t *data, instruction instr, char *label) {
     // Testing the array's capacity 
@@ -124,6 +129,7 @@ static void _bigint(compiler_data_t *data, int value, char *label) {
     instr.content.big_int = value;
     _add_lbl_instr(data, instr, label);
 }
+
 
 // ===== Functions to compile the AST =====
 
@@ -201,9 +207,40 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         // --- lbl_endif : 
         // Nothing more to do, except labelising the next instruction
         _ortho(data, TMP1, 0, lbl_endif, NULL);
-        break;  
+        break;
 
     case WHILE_STMT:
+        char *lbl_while_cond = "";
+        char *lbl_while_body = "";
+        char *lbl_while_end = "";
+
+        // --- lbl_while_cond :
+        // Labelise
+        _ortho(data, TMP1, 0, lbl_while_cond, NULL);
+        // Compilation of the condition expression
+        _compile_expr(stmt->content.while_stmt.cond, data);
+        // Load the body & end labels
+        _ortho(data, TMP2, 0, NULL, lbl_while_end);
+        _ortho(data, TMP3, 0, NULL, lbl_while_body);
+        // Test the result of the condition
+        _cond_move(data, TMP2, TMP3, ACC, NULL);
+        // Jump/Loading
+        _ortho(data, TMP1, 0, NULL, NULL);
+        _load_prog(data, TMP1, TMP2, NULL);
+
+        // --- lbl_while_body :
+        // Labelise
+        _ortho(data, TMP1, 0, lbl_while_body, NULL);
+        // Compilation of the body expression
+        _compile_expr(stmt->content.while_stmt.body, data);
+        // Jump back to the condition
+        _ortho(data, TMP1, 0, NULL, NULL);
+        _ortho(data, TMP2, 0, lbl_while_cond, NULL);
+        _load_prog(data, TMP1, TMP2, NULL);
+
+        // --- lbl_while_end :
+        // Labelise
+        _ortho(data, TMP1, 0, lbl_while_end, NULL);
         break;
 
     case FOR_STMT:
@@ -292,13 +329,13 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
 }
 
 // --- Compile a lambda
-static void _print_lambda(AST_Lambda lambda) { }
+static void _print_lambda(AST_Lambda lambda, compiler_data_t *data) { }
 
 // --- Compile arguments
-static void _print_args(AST_Args args) { }
+static void _print_args(AST_Args args, compiler_data_t *data) { }
 
 // --- Compile parameters
-static void _print_params(AST_Params params) { }
+static void _print_params(AST_Params params, compiler_data_t *data) { }
 
 // --- Compile a binary operation
 static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
@@ -410,10 +447,11 @@ static void _compile_unop(AST_Unop unop, compiler_data_t *data) {
 // --- Compile the full program
 void compile(AST_Prog prog, compiler_data_t *data) {
     // data->labeled_instruction_arr initialisation :
-    data->arr_size = 4;
+    data->arr_size = 8;
     data->arr_offset = 0;
     data->lbl_instr_arr = (labeled_instruction *) malloc(data->arr_size * sizeof(labeled_instruction));
-    // Special registers initialisations : ONE = 1, MO = -1 :
+    // Registers initialisations
+    // ONE = 1, MO = -1 :
     _ortho(data, ONE, 1, NULL, NULL);
     _nand(data, MO, ONE, ONE, NULL);
     _add(data, MO, MO, ONE, NULL);
