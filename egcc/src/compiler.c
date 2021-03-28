@@ -28,6 +28,13 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data);
 static void _compile_unop(AST_Unop unop, compiler_data_t *data);
 
 
+// ===== Primitives =====
+
+static void _print_int(int x) {
+    printf("%d\n", x);
+}
+
+
 // ===== Functions to write in the file =====
 
 
@@ -45,21 +52,6 @@ static void _write_op(compiler_data_t *data, int opcode, int a, int b, int c) {
     _write_int(data, op);
 }
 
-static void _cond_move(compiler_data_t *data, int a, int b, int c)          { _write_op(data, 0, a, b, c); }
-static void _array_index(compiler_data_t *data, int a, int b, int c)        { _write_op(data, 1, a, b, c); }
-static void _array_update(compiler_data_t *data, int a, int b, int c)       { _write_op(data, 2, a, b, c); }
-static void _add(compiler_data_t *data, int a, int b, int c)                { _write_op(data, 3, a, b, c); }
-static void _multiplication(compiler_data_t *data, int a, int b, int c)     { _write_op(data, 4, a, b, c); }
-static void _division(compiler_data_t *data, int a, int b, int c)           { _write_op(data, 5, a, b, c); }
-static void _nand(compiler_data_t *data, int a, int b, int c)               { _write_op(data, 6, a, b, c); }
-
-static void _halt(compiler_data_t *data)                                    { _write_op(data, 7, 0, 0, 0); }
-static void _allocation(compiler_data_t *data, int b, int c)                { _write_op(data, 8, 0, b, c); }
-static void _free(compiler_data_t *data, int c)                             { _write_op(data, 9, 0, 0, c); }
-static void _output(compiler_data_t *data, int c)                           { _write_op(data, 10, 0, 0, c); }
-static void _input(compiler_data_t *data, int c)                            { _write_op(data, 11, 0, 0, c); }
-static void _load_prog(compiler_data_t *data, int b, int c)                 { _write_op(data, 12, 0, b, c); }
-
 static void _ortho(compiler_data_t *data, int a, int value) {
     int op = (13 << 28) | ((a << 25) | value);
     _write_int(data, op);
@@ -70,28 +62,28 @@ static void _ortho(compiler_data_t *data, int a, int value) {
 // ===== Functions to create the labeled instructions array =====
 
 
-static void _add_lbl_instr(compiler_data_t *data, instruction instr, char *label) {
+static void _add_lbl_instr(compiler_data_t *data, instruction *instr, char *label) {
     // Testing the array's capacity 
     if(data->arr_offset >= data->arr_size) {
         data->arr_size = data->arr_size * 2;
-        data->lbl_instr_arr = (labeled_instruction *) realloc(data->lbl_instr_arr, data->arr_size * sizeof(labeled_instruction));
+        data->lbl_instr_arr = (labeled_instruction **) realloc(data->lbl_instr_arr, data->arr_size * sizeof(labeled_instruction *));
     }
     // Create and add the labeled instruction to the array
-    labeled_instruction lbl_instr;
-    lbl_instr.instr = &instr;
-    lbl_instr.label = label;
+    labeled_instruction *lbl_instr = (labeled_instruction *) malloc(sizeof(labeled_instruction));
+    lbl_instr->instr = instr;
+    lbl_instr->label = label;
     data->lbl_instr_arr[data->arr_offset] = lbl_instr;
     data->arr_offset++;
 }
 
-static instruction _create_std_instr(compiler_data_t *data, int opcode, int a, int b, int c) {
+static instruction * _create_std_instr(compiler_data_t *data, int opcode, int a, int b, int c) {
     // Construct the new instruction
-    instruction instr;
-    instr.op_type = STD_OP;
-    instr.content.std_op.opcode = opcode;
-    instr.content.std_op.a = a;
-    instr.content.std_op.b = b;
-    instr.content.std_op.c = c;
+    instruction *instr = (instruction *) malloc(sizeof(instruction));
+    instr->op_type = STD_OP;
+    instr->content.std_op.opcode = opcode;
+    instr->content.std_op.a = a;
+    instr->content.std_op.b = b;
+    instr->content.std_op.c = c;
     return instr;
 }
 
@@ -114,19 +106,19 @@ static void _load_prog(compiler_data_t *data, int b, int c, char *label)        
 // --- Special instructions
 static void _ortho(compiler_data_t *data, int a, int value, char *label, char *target_label) {
     // Only the ORTHO operators can take as value an int or a target label.
-    instruction instr;
-    instr.op_type = ORTHO_OP;
-    instr.content.ortho_op.opcode = 13;
-    instr.content.ortho_op.a = a;
-    instr.content.ortho_op.value = value;
-    instr.content.ortho_op.target_lbl = target_label;
+    instruction *instr = (instruction *) malloc(sizeof(instruction));
+    instr->op_type = ORTHO_OP;
+    instr->content.ortho_op.opcode = 13;
+    instr->content.ortho_op.a = a;
+    instr->content.ortho_op.value = value;
+    instr->content.ortho_op.target_lbl = target_label;
     _add_lbl_instr(data, instr, label);
 }
 
 static void _bigint(compiler_data_t *data, int value, char *label) {
-    instruction instr;
-    instr.op_type = BIGINT;
-    instr.content.big_int = value;
+    instruction *instr = (instruction *) malloc(sizeof(instruction));
+    instr->op_type = BIGINT;
+    instr->content.big_int = value;
     _add_lbl_instr(data, instr, label);
 }
 
@@ -192,7 +184,7 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         // Labelise
         _ortho(data, TMP1, 0, lbl_then, NULL);
         // Compile if's consequence
-        _compile_expr(stmt->content.if_stmt.conseq, data);
+        _compile_stmts(stmt->content.if_stmt.conseq, data);
         // and we jump at lbl_endif so we avoid the else part
         _ortho(data, TMP1, 0, NULL, NULL);
         _ortho(data, TMP2, 0, NULL, lbl_endif);
@@ -202,7 +194,7 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         // Labelise
         _ortho(data, TMP1, 0, lbl_else, NULL); 
         // Compile if's alternative
-        _compile_expr(stmt->content.if_stmt.altern, data);
+        _compile_stmts(stmt->content.if_stmt.altern, data);
 
         // --- lbl_endif : 
         // Nothing more to do, except labelising the next instruction
@@ -232,7 +224,7 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         // Labelise
         _ortho(data, TMP1, 0, lbl_while_body, NULL);
         // Compilation of the body expression
-        _compile_expr(stmt->content.while_stmt.body, data);
+        _compile_stmts(stmt->content.while_stmt.body, data);
         // Jump back to the condition
         _ortho(data, TMP1, 0, NULL, NULL);
         _ortho(data, TMP2, 0, lbl_while_cond, NULL);
@@ -244,9 +236,16 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         break;
 
     case FOR_STMT:
+        char *lbl_for_cond = "";
+        char *lbl_for_body = "";
+        char *lbl_for_end = "";
+
+        // Initialisation
+
         break;
 
     case RETURN_STMT:
+        _compile_expr(stmt->content.return_stmt, data);
         break;
 
     default:
@@ -375,7 +374,7 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         break;
 
     case EQEQ:
-        // Algorithme based on the universal logical operator NAND, following Boole's algebra's rules :
+        // Algorithm based on the universal logical operator NAND, following Boole's algebra's rules :
         _nand(data, TMP2, TMP1, ACC, NULL);   // r = NAND(x, y)
         _nand(data, TMP1, TMP2, TMP1, NULL);  // r_x = NAND(r, x)
         _nand(data, ACC, TMP2, ACC, NULL);    // r_y = NAND(r, y)
@@ -396,9 +395,19 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         break;
 
     case LT:
+        // If x/y = 0, then x < y
+        _division(data, TMP1, TMP1, ACC, NULL);
+        _ortho(data, ACC, 1, NULL, NULL);
+        _ortho(data, TMP2, 0, NULL, NULL);
+        _cond_move(data, ACC, TMP2, ACC, NULL);
         break;
 
     case GT:
+        // If y/x = 0, then x > y
+        _division(data, TMP1, ACC, TMP1, NULL);
+        _ortho(data, ACC, 1, NULL, NULL);
+        _ortho(data, TMP2, 0, NULL, NULL);
+        _cond_move(data, ACC, TMP2, ACC, NULL);
         break;
 
     case AND:
@@ -449,7 +458,7 @@ void compile(AST_Prog prog, compiler_data_t *data) {
     // data->labeled_instruction_arr initialisation :
     data->arr_size = 8;
     data->arr_offset = 0;
-    data->lbl_instr_arr = (labeled_instruction *) malloc(data->arr_size * sizeof(labeled_instruction));
+    data->lbl_instr_arr = (labeled_instruction **) malloc(data->arr_size * sizeof(labeled_instruction *));
     // Registers initialisations
     // ONE = 1, MO = -1 :
     _ortho(data, ONE, 1, NULL, NULL);

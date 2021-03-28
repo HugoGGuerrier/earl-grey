@@ -55,7 +55,7 @@ typedef struct {
 typedef struct {
     compiler_settings_t *settings;
     compiler_error_t *error;
-    labeled_instruction *lbl_instr_arr;
+    labeled_instruction **lbl_instr_arr;
     unsigned int arr_size;
     unsigned int arr_offset;
 } compiler_data_t;
