@@ -195,6 +195,8 @@ static void _compile_prog(AST_Prog prog, compiler_data_t *data) {
 // --- Compile a statement
 static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
+    int lbl_x, lbl_y, lbl_z;
+
     switch (stmt->stmt_type) {
 
     case LET_STMT:
@@ -211,13 +213,13 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         // Compilation of the condition expression
         _compile_expr(stmt->content.if_stmt.cond, data);
 
-        int lbl_then;
-        int lbl_else;
-        int lbl_endif;
+        lbl_x = data->nb_lbl++; // then_lbl
+        lbl_y = data->nb_lbl++; // else_lbl
+        lbl_z = data->nb_lbl++; // endif_lbl
 
         // Load the then & else labels
-        _ortho(data, TMP2, 0, -1, lbl_then);
-        _ortho(data, TMP3, 0, -1, lbl_else);
+        _ortho(data, TMP2, 0, -1, lbl_x);
+        _ortho(data, TMP3, 0, -1, lbl_y);
 
         // We will load the program at line TMP3 (jump TMP3)
         // So we need to put TMP2 in TMP3 if ACC is true (!=0)
@@ -229,38 +231,38 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
         // --- lbl_then :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_then, -1);
+        _ortho(data, TMP1, 0, lbl_x, -1);
         // Compile if's consequence
         _compile_stmts(stmt->content.if_stmt.conseq, data);
         // and we jump at lbl_endif so we avoid the else part
         _ortho(data, TMP1, 0, -1, -1);
-        _ortho(data, TMP2, 0, -1, lbl_endif);
+        _ortho(data, TMP2, 0, -1, lbl_z);
         _load_prog(data, TMP1, TMP2, -1);
 
         // --- lbl_else :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_else, -1); 
+        _ortho(data, TMP1, 0, lbl_y, -1); 
         // Compile if's alternative
         _compile_stmts(stmt->content.if_stmt.altern, data);
 
         // --- lbl_endif : 
         // Nothing more to do, except labelising the next instruction
-        _ortho(data, TMP1, 0, lbl_endif, -1);
+        _ortho(data, TMP1, 0, lbl_z, -1);
         break;
 
     case WHILE_STMT:
-        int lbl_while_cond;
-        int lbl_while_body;
-        int lbl_while_end;
+        lbl_x = data->nb_lbl++; // while_cond
+        lbl_y = data->nb_lbl++; // while_body
+        lbl_z = data->nb_lbl++; // while_end
 
         // --- lbl_while_cond :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_while_cond, -1);
+        _ortho(data, TMP1, 0, lbl_x, -1);
         // Compilation of the condition expression
         _compile_expr(stmt->content.while_stmt.cond, data);
         // Load the body & end labels
-        _ortho(data, TMP2, 0, -1, lbl_while_end);
-        _ortho(data, TMP3, 0, -1, lbl_while_body);
+        _ortho(data, TMP2, 0, -1, lbl_z);
+        _ortho(data, TMP3, 0, -1, lbl_y);
         // Test the result of the condition
         _cond_move(data, TMP2, TMP3, ACC, -1);
         // Jump/Loading
@@ -269,23 +271,23 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
         // --- lbl_while_body :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_while_body, -1);
+        _ortho(data, TMP1, 0, lbl_y, -1);
         // Compilation of the body expression
         _compile_stmts(stmt->content.while_stmt.body, data);
         // Jump back to the condition
         _ortho(data, TMP1, 0, -1, -1);
-        _ortho(data, TMP2, 0, lbl_while_cond, -1);
+        _ortho(data, TMP2, 0, lbl_x, -1);
         _load_prog(data, TMP1, TMP2, -1);
 
         // --- lbl_while_end :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_while_end, -1);
+        _ortho(data, TMP1, 0, lbl_z, -1);
         break;
 
     case FOR_STMT:
-        int lbl_for_cond;
-        int lbl_for_body;
-        int lbl_for_end;
+        lbl_x = data->nb_lbl++; // for_cond
+        lbl_y = data->nb_lbl++; // for_body
+        lbl_z = data->nb_lbl++; // for end
 
         // Initialisation
 
