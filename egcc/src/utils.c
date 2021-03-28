@@ -70,3 +70,8 @@ char *change_extension(char *file_name, char *new_extension) {
     return res;
     
 }
+
+// --- Reverse an int endianess
+int reverse(int to_reverse) {
+    return ((to_reverse>>24)&0xFF) | ((to_reverse<<8)&0xFF0000) | ((to_reverse>>8)&0xFF00) | ((to_reverse<<24)&0xFF000000);
+}

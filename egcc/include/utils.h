@@ -6,6 +6,7 @@
 
 char **str_split(char *str, char delimiter);
 char *change_extension(char *file_name, char *new_extension);
+int reverse(int to_reverse);
 
 
 #endif

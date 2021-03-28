@@ -37,8 +37,8 @@ typedef struct {
         struct {
             int opcode;
             int a;
-            int value;
-            char *target_lbl;
+            int val;
+            char val_is_target_lbl;
         } ortho_op;
 
         int big_int;
@@ -47,7 +47,7 @@ typedef struct {
 
 // --- Structure to associate labels to instructions
 typedef struct {
-    char *label;
+    int label;
     instruction *instr;
 } labeled_instruction;
 
@@ -58,6 +58,8 @@ typedef struct {
     labeled_instruction **lbl_instr_arr;
     unsigned int arr_size;
     unsigned int arr_offset;
+    int *lbl_adress_arr;
+    int nb_lbl;
 } compiler_data_t;
 
 
