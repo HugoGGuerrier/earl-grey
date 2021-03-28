@@ -91,14 +91,14 @@ static void _generate_bytecode(compiler_data_t *data) {
 }
 
 
-// ===== Functions to link labels to their adress =====
+// ===== Function to link labels to their adress =====
 
 
 static void _link_labels(compiler_data_t *data) {
     for (int i = 0; i < data->arr_size; i++) {
         int label = data->lbl_instr_arr[i]->label;
         if (label != -1) {
-            // The line is labeled
+            // The line is labeled so we store the label and the line number
             data->lbl_adress_arr[label] = i;
         }
     }
