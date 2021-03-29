@@ -327,6 +327,8 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
 
     switch (expr->expr_type) {
 
+    int lbl_x, lbl_y;
+
     case INT_EXPR:
         // The max integer value for ORTHO instruction should be encodable on 25 bits :
         if (expr->content.int_expr < 33554432) {
@@ -334,16 +336,16 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
             _ortho(data, ACC, expr->content.int_expr, 0, -1);
         } else {
             // It is not encodable on 25 bits : kind of "bigint", even if is still a 32bits-integer
-            int lbl_bigint;
-            int lbl_after_bigint;
+            lbl_x = data->nb_lbl++;
+            lbl_y = data->nb_lbl++;
             // Jump/Load the program after the bigint
             _ortho(data, TMP1, 0, 0, -1);
-            _ortho(data, ACC, lbl_after_bigint, 1, -1);
+            _ortho(data, ACC, lbl_y, 1, -1);
             _load_prog(data, TMP1, ACC, -1);
             // Labelised bigint
-            _bigint(data, expr->content.int_expr, lbl_bigint);
+            _bigint(data, expr->content.int_expr, lbl_x);
             // After bigint : store the bigint in ACC
-            _ortho(data, ACC, lbl_bigint, 1, lbl_after_bigint);
+            _ortho(data, ACC, lbl_x, 1, lbl_y);
             _array_index(data, ACC, TMP1, ACC, -1);
         }
         break;
