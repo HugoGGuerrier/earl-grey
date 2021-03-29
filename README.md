@@ -39,3 +39,4 @@ The virtual machine is also in C for performance issues.
 * Virtual machine : Verify the endianess of the CPU
 * Virtual machine : Read a char in Windows
 * Virtual machine : Read a char in Mac OS
+* Compiler : Finish!!

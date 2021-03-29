@@ -31,6 +31,7 @@ static void _compile_unop(AST_Unop unop, compiler_data_t *data);
 
 // ===== Primitives =====
 
+
 static void _print_int(int x) {
     printf("%d\n", x);
 }
@@ -40,7 +41,7 @@ static void _print_int(int x) {
 
 
 static void _write_int(compiler_data_t *data, int x) {
-    x = reverse(x);
+    x = reverse(x); // Reverse the endianess
     fwrite(&x, sizeof(int), 1, data->settings->output_file);
 }
 
@@ -70,7 +71,7 @@ static void _generate_bytecode(compiler_data_t *data) {
 
         case ORTHO_OP:
             // Replace labels
-            if (instr->content.ortho_op.val_is_target_lbl) {
+            if (instr->content.ortho_op.val_is_target_lbl) { // val_is_target != 0
                 // Replace the label name by its adress value
                 instr->content.ortho_op.val = data->lbl_adress_arr[instr->content.ortho_op.val];
             }
@@ -151,7 +152,7 @@ static void _input(compiler_data_t *data, int c, int label)                     
 static void _load_prog(compiler_data_t *data, int b, int c, int label)                 { _add_lbl_instr(data, _create_std_instr(data, 12, 0, b, c), label); }
 
 // --- Special instructions
-static void _ortho(compiler_data_t *data, int a, int value, int label, char val_is_target_lbl) {
+static void _ortho(compiler_data_t *data, int a, int value, char val_is_target_lbl, int label) {
     // Only the ORTHO operators can take as value an int or a target label.
     instruction *instr = (instruction *) malloc(sizeof(instruction));
     instr->op_type = ORTHO_OP;
@@ -201,12 +202,16 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
     case LET_STMT:
         _compile_expr(stmt->content.let_stmt.expr, data);
+        // TODO
         break;
     
     case AFFECT_STMT:
+        _compile_expr(stmt->content.affect_stmt.expr, data);
+        // TODO
         break;
 
     case FUN_STMT:
+        // TODO
         break;
 
     case IF_STMT:
@@ -218,36 +223,36 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         lbl_z = data->nb_lbl++; // endif_lbl
 
         // Load the then & else labels
-        _ortho(data, TMP2, 0, -1, lbl_x);
-        _ortho(data, TMP3, 0, -1, lbl_y);
+        _ortho(data, TMP2, lbl_x, 1, -1);
+        _ortho(data, TMP3, lbl_y, 1, -1);
 
         // We will load the program at line TMP3 (jump TMP3)
         // So we need to put TMP2 in TMP3 if ACC is true (!=0)
         // This way, TMP3 = lbl_then if ACC is true, and else TMP3 = lbl_else
         _cond_move(data, TMP3, TMP2, ACC, -1);
         // Jump/Loading :
-        _ortho(data, TMP1, 0, -1, -1);
+        _ortho(data, TMP1, 0, 0, -1);
         _load_prog(data, TMP1, TMP3, -1);
 
         // --- lbl_then :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_x, -1);
+        _ortho(data, TMP1, 0, 0, lbl_x);
         // Compile if's consequence
         _compile_stmts(stmt->content.if_stmt.conseq, data);
         // and we jump at lbl_endif so we avoid the else part
-        _ortho(data, TMP1, 0, -1, -1);
-        _ortho(data, TMP2, 0, -1, lbl_z);
+        _ortho(data, TMP1, 0, 0, -1);
+        _ortho(data, TMP2, lbl_z, 1, -1);
         _load_prog(data, TMP1, TMP2, -1);
 
         // --- lbl_else :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_y, -1); 
+        _ortho(data, TMP1, 0, 0, lbl_y); 
         // Compile if's alternative
         _compile_stmts(stmt->content.if_stmt.altern, data);
 
         // --- lbl_endif : 
         // Nothing more to do, except labelising the next instruction
-        _ortho(data, TMP1, 0, lbl_z, -1);
+        _ortho(data, TMP1, 0, 0, lbl_z);
         break;
 
     case WHILE_STMT:
@@ -257,31 +262,31 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
 
         // --- lbl_while_cond :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_x, -1);
+        _ortho(data, TMP1, 0, 0, lbl_x);
         // Compilation of the condition expression
         _compile_expr(stmt->content.while_stmt.cond, data);
         // Load the body & end labels
-        _ortho(data, TMP2, 0, -1, lbl_z);
-        _ortho(data, TMP3, 0, -1, lbl_y);
+        _ortho(data, TMP2, lbl_z, 1, -1);
+        _ortho(data, TMP3, lbl_y, 1, -1);
         // Test the result of the condition
         _cond_move(data, TMP2, TMP3, ACC, -1);
         // Jump/Loading
-        _ortho(data, TMP1, 0, -1, -1);
+        _ortho(data, TMP1, 0, 0, -1);
         _load_prog(data, TMP1, TMP2, -1);
 
         // --- lbl_while_body :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_y, -1);
+        _ortho(data, TMP1, 0, 0, lbl_y);
         // Compilation of the body expression
         _compile_stmts(stmt->content.while_stmt.body, data);
         // Jump back to the condition
-        _ortho(data, TMP1, 0, -1, -1);
-        _ortho(data, TMP2, 0, lbl_x, -1);
+        _ortho(data, TMP1, 0, 0, -1);
+        _ortho(data, TMP2, lbl_x, 1, -1);
         _load_prog(data, TMP1, TMP2, -1);
 
         // --- lbl_while_end :
         // Labelise
-        _ortho(data, TMP1, 0, lbl_z, -1);
+        _ortho(data, TMP1, 0, 0, lbl_z);
         break;
 
     case FOR_STMT:
@@ -290,6 +295,7 @@ static void _compile_stmt(AST_Stmt stmt, compiler_data_t *data) {
         lbl_z = data->nb_lbl++; // for end
 
         // Initialisation
+        // TODO
 
         break;
 
@@ -325,27 +331,29 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
         // The max integer value for ORTHO instruction should be encodable on 25 bits :
         if (expr->content.int_expr < 33554432) {
             // It is encodable on 25 bits
-            _ortho(data, ACC, expr->content.int_expr, -1, -1);
+            _ortho(data, ACC, expr->content.int_expr, 0, -1);
         } else {
             // It is not encodable on 25 bits : kind of "bigint", even if is still a 32bits-integer
             int lbl_bigint;
             int lbl_after_bigint;
             // Jump/Load the program after the bigint
-            _ortho(data, TMP1, 0, -1, -1);
-            _ortho(data, ACC, 0, -1, lbl_after_bigint);
+            _ortho(data, TMP1, 0, 0, -1);
+            _ortho(data, ACC, lbl_after_bigint, 1, -1);
             _load_prog(data, TMP1, ACC, -1);
             // Labelised bigint
             _bigint(data, expr->content.int_expr, lbl_bigint);
             // After bigint : store the bigint in ACC
-            _ortho(data, ACC, 0, lbl_after_bigint, lbl_bigint);
+            _ortho(data, ACC, lbl_bigint, 1, lbl_after_bigint);
             _array_index(data, ACC, TMP1, ACC, -1);
         }
         break;
 
     case STRING_EXPR:
+        // TODO
         break;
 
     case IDENT_EXPR:
+        // TODO
         break;
 
     case PAREN_EXPR:
@@ -361,9 +369,11 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
         break;
 
     case APP_EXPR:
+        // TODO
         break;
 
     case LAMBDA_EXPR:
+        // TODO
         break;
     
     default:
@@ -374,13 +384,19 @@ static void _compile_expr(AST_Expr expr, compiler_data_t *data) {
 }
 
 // --- Compile a lambda
-static void _print_lambda(AST_Lambda lambda, compiler_data_t *data) { }
+static void _compile_lambda(AST_Lambda lambda, compiler_data_t *data) { 
+    // TODO
+}
 
 // --- Compile arguments
-static void _print_args(AST_Args args, compiler_data_t *data) { }
+static void _compile_args(AST_Args args, compiler_data_t *data) { 
+    // TODO
+}
 
 // --- Compile parameters
-static void _print_params(AST_Params params, compiler_data_t *data) { }
+static void _compile_params(AST_Params params, compiler_data_t *data) { 
+    // TODO
+}
 
 // --- Compile a binary operation
 static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
@@ -429,30 +445,32 @@ static void _compile_binop(AST_Binop binop, compiler_data_t *data) {
         // (not_res = 0) : x == y
         // (not_res = 1) : x != y
         // Initialisation of the result to true (1)
-        _ortho(data, ACC, 1, -1, -1);
+        _ortho(data, ACC, 1, 0, -1);
         // Put it at false (0) if not_res = 1
         _cond_move(data, ACC, 0, TMP1, -1);
         break;
 
     case LTEQ:
+        // TODO
         break;
 
     case GTEQ:
+        // TODO
         break;
 
     case LT:
         // If x/y = 0, then x < y
         _division(data, TMP1, TMP1, ACC, -1);
-        _ortho(data, ACC, 1, -1, -1);
-        _ortho(data, TMP2, 0, -1, -1);
+        _ortho(data, ACC, 1, 0, -1);
+        _ortho(data, TMP2, 0, 0, -1);
         _cond_move(data, ACC, TMP2, ACC, -1);
         break;
 
     case GT:
         // If y/x = 0, then x > y
         _division(data, TMP1, ACC, TMP1, -1);
-        _ortho(data, ACC, 1, -1, -1);
-        _ortho(data, TMP2, 0, -1, -1);
+        _ortho(data, ACC, 1, 0, -1);
+        _ortho(data, TMP2, 0, 0, -1);
         _cond_move(data, ACC, TMP2, ACC, -1);
         break;
 
@@ -509,7 +527,7 @@ void compile(AST_Prog prog, compiler_data_t *data) {
 
     // Registers initialisations
     // ONE = 1, MO = -1 :
-    _ortho(data, ONE, 1, -1, -1);
+    _ortho(data, ONE, 1, 0, -1);
     _nand(data, MO, ONE, ONE, -1);
     _add(data, MO, MO, ONE, -1);
 
